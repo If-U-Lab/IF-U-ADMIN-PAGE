@@ -1,0 +1,8 @@
+{
+  "name": "Dilemma Lab Admin",
+  "description": "Dopamine-driven voting platform admin dashboard with AI-powered content generation and community management.",
+  "requestFramePermissions": [
+    "camera",
+    "microphone"
+  ]
+}
