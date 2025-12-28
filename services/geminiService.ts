@@ -1,6 +1,14 @@
 
 import { GoogleGenAI, Type } from "@google/genai";
 import { AIGeneratedQuestion } from "../types";
+import {
+  extractQuestionDNA,
+  checkDiversity,
+  addToQuestionHistory,
+  getForbiddenCombinations,
+  getUnderusedElements,
+  getEngagementPattern
+} from "./questionDiversity";
 
 export const generateDopamineQuestion = async (keyword: string): Promise<AIGeneratedQuestion | null> => {
   const apiKey = process.env.API_KEY;
@@ -51,6 +59,138 @@ export const generateDopamineQuestion = async (keyword: string): Promise<AIGener
     }
     return null;
   }
+};
+
+/**
+ * 고도화된 질문 생성 함수 (다양성 검증 포함)
+ * @param keyword 키워드 (선택)
+ * @param maxRetries 재생성 최대 횟수
+ */
+export const generateDiverseQuestion = async (
+  keyword?: string,
+  maxRetries = 3
+): Promise<AIGeneratedQuestion | null> => {
+  for (let attempt = 0; attempt < maxRetries; attempt++) {
+    console.log(`[Attempt ${attempt + 1}/${maxRetries}] 질문 생성 중...`);
+
+    // 1. 참여도 패턴 및 금지 조합 가져오기
+    const patterns = getEngagementPattern();
+    const forbiddenCombos = getForbiddenCombinations();
+    const underused = getUnderusedElements();
+
+    // 2. 창의성 강제 프롬프트
+    const creativityPrompt = `
+당신은 극도로 창의적인 질문 생성 전문가입니다.
+
+[엄격한 제약사항 - 절대 사용 금지]
+최근 사용된 조합들 (중복 절대 불가):
+${forbiddenCombos.map((combo, i) => `
+${i + 1}. 주제: ${combo.theme}, 구조: ${combo.structure}, 감정: ${combo.emotion}
+`).join('')}
+
+[적극 권장 요소 - 최근 적게 사용됨]
+- 주제: ${underused.themes.join(', ')}
+- 구조: ${underused.structures.join(', ')}
+- 감정: ${underused.emotions.join(', ')}
+
+[데이터 기반 최적화 가이드]
+✅ 높은 참여도 특징:
+${patterns.high_performing_features.map(f => `- ${f}`).join('\n')}
+
+❌ 피해야 할 특징:
+${patterns.low_performing_features.map(f => `- ${f}`).join('\n')}
+
+📊 최적 범위:
+- 제목: ${patterns.optimal_ranges.title_length.min}-${patterns.optimal_ranges.title_length.max}자
+- 설명: ${patterns.optimal_ranges.description_length.min}-${patterns.optimal_ranges.description_length.max}자
+- 투표 분포 격차: ${patterns.optimal_ranges.vote_distribution.ideal_gap}% 이내
+
+💡 추천사항:
+${patterns.recommendations.map(r => `- ${r}`).join('\n')}
+
+[창의성 가이드라인]
+1. **예상 밖 조합** - 평소 함께 다루지 않는 주제 엮기
+2. **역발상** - 일반적 통념 뒤집기
+3. **구체적 시나리오** - 생생한 상황 제시
+4. **3단 논리** - A 선택 → B 잃음 → C 생김
+5. **문화적 뉘앙스** - 한국인 특유의 맥락
+
+${keyword ? `[키워드 활용]: "${keyword}"를 자연스럽게 녹여내되, 뻔하지 않게` : ''}
+
+[필수] 도파민 트리거 점수도 함께 반환하세요.
+`;
+
+    const apiKey = process.env.API_KEY;
+    if (!apiKey) {
+      console.error('[ERROR] API Key is missing!');
+      return null;
+    }
+
+    const ai = new GoogleGenAI({ apiKey });
+
+    try {
+      const response = await ai.models.generateContent({
+        model: "gemini-2.5-flash-lite",
+        contents: creativityPrompt,
+        config: {
+          systemInstruction: "당신은 데이터 기반으로 최적화된 논쟁적 질문 전문가입니다. JSON 형식으로만 출력하세요.",
+          responseMimeType: "application/json",
+          responseSchema: {
+            type: Type.OBJECT,
+            properties: {
+              title: { type: Type.STRING, description: '질문 제목 (한국어, 12-20자)' },
+              description: { type: Type.STRING, description: '상황 설명 (80-180자)' },
+              optionA: { type: Type.STRING },
+              optionB: { type: Type.STRING },
+              category: { type: Type.STRING },
+              tags: { type: Type.ARRAY, items: { type: Type.STRING } },
+              dopaminePreview: { type: Type.STRING },
+              triggers: {
+                type: Type.OBJECT,
+                properties: {
+                  controversy: { type: Type.NUMBER },
+                  relatability: { type: Type.NUMBER },
+                  surprise: { type: Type.NUMBER },
+                  personal_stake: { type: Type.NUMBER },
+                  social_comparison: { type: Type.NUMBER },
+                  moral_dilemma: { type: Type.NUMBER },
+                  timeliness: { type: Type.NUMBER }
+                }
+              }
+            },
+            required: ["title", "description", "optionA", "optionB", "category", "tags", "dopaminePreview"]
+          }
+        }
+      });
+
+      const question: AIGeneratedQuestion = JSON.parse(response.text);
+
+      // 3. DNA 추출
+      console.log('[DNA] 질문 DNA 추출 중...');
+      question.dna = await extractQuestionDNA(question);
+
+      // 4. 다양성 검증
+      console.log('[Diversity] 다양성 검증 중...');
+      const diversityCheck = await checkDiversity(question);
+
+      if (!diversityCheck.passed) {
+        console.log(`[재생성 필요] ${diversityCheck.reason}`);
+        continue;  // 재시도
+      }
+
+      // 5. 성공 - DNA 히스토리에 추가
+      addToQuestionHistory(question.dna);
+      console.log('[SUCCESS] 다양성 검증 통과!');
+
+      return question;
+
+    } catch (error) {
+      console.error(`[ERROR] Attempt ${attempt + 1} failed:`, error);
+    }
+  }
+
+  console.error('[FAILED] 최대 재시도 횟수 초과');
+  return null;
 };
 
 /**

@@ -1,6 +1,6 @@
 
 import React, { useState } from 'react';
-import { generateDopamineQuestion, researchAndBatchGenerate } from '../services/geminiService';
+import { generateDiverseQuestion, researchAndBatchGenerate } from '../services/geminiService';
 import { AIGeneratedQuestion } from '../types';
 import { Icons } from '../constants';
 
@@ -13,8 +13,21 @@ const AIGenerator: React.FC = () => {
   const handleManualGenerate = async () => {
     if (!keyword.trim()) return;
     setIsGenerating(true);
-    const data = await generateDopamineQuestion(keyword);
-    if (data) setResults([data, ...results]);
+
+    // 고도화된 질문 생성 (다양성 검증 포함)
+    const data = await generateDiverseQuestion(keyword);
+
+    if (data) {
+      setResults([data, ...results]);
+      console.log('[질문 생성 성공]', {
+        title: data.title,
+        dna: data.dna,
+        triggers: data.triggers
+      });
+    } else {
+      alert('질문 생성에 실패했습니다. 다양성 기준을 만족하는 질문을 생성할 수 없습니다. 다른 키워드를 시도해보세요.');
+    }
+
     setIsGenerating(false);
     setKeyword('');
   };

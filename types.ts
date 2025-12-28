@@ -343,8 +343,64 @@ export interface AdminLog {
 // ============================================
 
 /**
+ * 질문 DNA - 질문의 유전자 정보
+ * 다양성 및 중복 검증에 사용
+ */
+export interface QuestionDNA {
+  // 1차원: 주제
+  primary_theme: string;     // 예: "money", "relationship", "career"
+  secondary_theme?: string;  // 예: "health", "freedom"
+
+  // 2차원: 구조 패턴
+  structure_type: string;    // 예: "sacrifice", "extreme_choice", "time_frame"
+
+  // 3차원: 감정 트리거
+  emotion_trigger: string;   // 예: "anxiety", "envy", "pride"
+
+  // 4차원: 프레임
+  framing: string;          // 예: "individual_vs_social", "present_vs_future"
+
+  // 5차원: 난이도
+  difficulty: 'easy' | 'medium' | 'hard';  // 선택의 어려움 정도
+
+  // 6차원: 대상/주체
+  subject: string;          // 예: "self", "family", "friend", "society"
+
+  // 시그니처 해시 (조합)
+  signature: string;  // MD5 hash of key dimensions
+}
+
+/**
+ * 도파민 트리거 점수
+ * 심리학적 참여 유도 요소
+ */
+export interface DopamineTriggers {
+  controversy: number;      // 논쟁성 (0-100)
+  relatability: number;     // 공감성
+  surprise: number;         // 놀라움
+  personal_stake: number;   // 개인적 이해관계
+  social_comparison: number; // 사회적 비교 욕구
+  moral_dilemma: number;    // 도덕적 갈등 강도
+  timeliness: number;       // 시의성/트렌드 반영
+}
+
+/**
+ * 참여도 메트릭 (실제 데이터 수집 후 사용)
+ */
+export interface EngagementMetrics {
+  vote_count: number;
+  comment_count: number;
+  share_count: number;
+  avg_time_to_vote_sec: number;
+  vote_distribution_a_percent: number;
+  vote_distribution_b_percent: number;
+  return_rate: number;
+  engagement_score: number;  // 종합 점수
+}
+
+/**
  * AI 생성 질문 타입 (Gemini API 응답)
- * camelCase로 통일
+ * camelCase로 통일 + DNA 정보 포함
  */
 export interface AIGeneratedQuestion {
   title: string;
@@ -354,4 +410,33 @@ export interface AIGeneratedQuestion {
   category: string;
   tags: string[];
   dopaminePreview: string;
+
+  // 고도화 정보
+  dna?: QuestionDNA;
+  triggers?: DopamineTriggers;
+  predicted_engagement?: number;  // 예상 참여도
+}
+
+/**
+ * 다양성 검증 결과
+ */
+export interface DiversityCheckResult {
+  passed: boolean;
+  reason?: string;
+  similarity_score?: number;
+  distance?: number;
+}
+
+/**
+ * 참여도 패턴 분석 결과
+ */
+export interface EngagementPattern {
+  high_performing_features: string[];
+  low_performing_features: string[];
+  optimal_ranges: {
+    title_length: { min: number; max: number };
+    description_length: { min: number; max: number };
+    vote_distribution: { ideal_gap: number };
+  };
+  recommendations: string[];
 }
