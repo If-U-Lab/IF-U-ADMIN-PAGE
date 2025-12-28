@@ -13,6 +13,7 @@ type View = 'overview' | 'questions' | 'ai-gen' | 'comments' | 'users' | 'logs';
 const App: React.FC = () => {
   const [currentView, setCurrentView] = useState<View>('overview');
   const [isSidebarCollapsed, setIsSidebarCollapsed] = useState(false);
+  const [isMobileSidebarOpen, setIsMobileSidebarOpen] = useState(false);
   const [isNotificationOpen, setIsNotificationOpen] = useState(false);
   const notificationRef = useRef<HTMLDivElement>(null);
 
@@ -37,11 +38,20 @@ const App: React.FC = () => {
 
   return (
     <div className="flex min-h-screen bg-[#F9F9F9]">
+      {/* Mobile Sidebar Overlay */}
+      {isMobileSidebarOpen && (
+        <div
+          className="fixed inset-0 bg-black/50 z-40 lg:hidden"
+          onClick={() => setIsMobileSidebarOpen(false)}
+        />
+      )}
+
       {/* Sidebar */}
-      <aside 
+      <aside
         className={`${
           isSidebarCollapsed ? 'w-20' : 'w-64'
-        } bg-white border-r border-gray-200 flex flex-col fixed inset-y-0 z-50 transition-all duration-300 ease-in-out`}
+        } bg-white border-r border-gray-200 flex flex-col fixed inset-y-0 z-50 transition-all duration-300 ease-in-out
+        ${isMobileSidebarOpen ? 'translate-x-0' : '-translate-x-full'} lg:translate-x-0`}
       >
         <div className="p-6 border-b border-gray-100 flex items-center justify-between">
           <div className={`flex items-center gap-3 overflow-hidden ${isSidebarCollapsed ? 'opacity-0 w-0' : 'opacity-100 w-auto'} transition-opacity duration-200`}>
@@ -64,11 +74,14 @@ const App: React.FC = () => {
           {menuItems.map((item) => (
             <button
               key={item.id}
-              onClick={() => setCurrentView(item.id as View)}
+              onClick={() => {
+                setCurrentView(item.id as View);
+                setIsMobileSidebarOpen(false);
+              }}
               title={isSidebarCollapsed ? item.name : ''}
               className={`w-full flex items-center gap-3 px-4 py-3 rounded-xl transition-all duration-200 ${
-                currentView === item.id 
-                ? 'bg-black text-white shadow-lg shadow-black/20' 
+                currentView === item.id
+                ? 'bg-black text-white shadow-lg shadow-black/20'
                 : 'text-gray-500 hover:bg-gray-50 hover:text-black'
               }`}
             >
@@ -92,35 +105,46 @@ const App: React.FC = () => {
       </aside>
 
       {/* Main Content */}
-      <main className={`${isSidebarCollapsed ? 'ml-20' : 'ml-64'} flex-1 p-8 transition-all duration-300`}>
-        <header className="flex justify-between items-center mb-8">
-          <div>
-            <h1 className="text-2xl font-bold text-gray-900">
-              {menuItems.find(m => m.id === currentView)?.name}
-            </h1>
-            <p className="text-gray-500 text-sm mt-1 uppercase tracking-wider font-semibold">
-              Admin Control Panel / {currentView}
-            </p>
-          </div>
-          
-          <div className="flex items-center gap-4 relative">
-            <div className="bg-white border border-gray-200 rounded-xl px-4 py-2 flex items-center gap-3 shadow-sm">
-              <span className="w-2 h-2 bg-green-500 rounded-full animate-pulse"></span>
-              <span className="text-xs font-bold text-gray-500">SYSTEM ONLINE</span>
+      <main className={`${isSidebarCollapsed ? 'lg:ml-20' : 'lg:ml-64'} flex-1 p-4 sm:p-6 lg:p-8 transition-all duration-300`}>
+        <header className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 mb-6 lg:mb-8">
+          <div className="flex items-center gap-3 w-full sm:w-auto">
+            {/* Mobile Hamburger Menu */}
+            <button
+              onClick={() => setIsMobileSidebarOpen(true)}
+              className="lg:hidden p-2 hover:bg-gray-100 rounded-lg transition-colors"
+            >
+              <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 6h16M4 12h16M4 18h16" />
+              </svg>
+            </button>
+            <div className="flex-1">
+              <h1 className="text-xl sm:text-2xl font-bold text-gray-900">
+                {menuItems.find(m => m.id === currentView)?.name}
+              </h1>
+              <p className="text-gray-500 text-xs sm:text-sm mt-1 uppercase tracking-wider font-semibold">
+                Admin Control Panel / {currentView}
+              </p>
             </div>
-            
+          </div>
+
+          <div className="flex items-center gap-2 sm:gap-4 relative w-full sm:w-auto justify-end">
+            <div className="hidden sm:flex bg-white border border-gray-200 rounded-xl px-3 sm:px-4 py-2 items-center gap-2 sm:gap-3 shadow-sm">
+              <span className="w-2 h-2 bg-green-500 rounded-full animate-pulse"></span>
+              <span className="text-[10px] sm:text-xs font-bold text-gray-500 hidden md:inline">SYSTEM ONLINE</span>
+            </div>
+
             <div ref={notificationRef}>
-              <button 
+              <button
                 onClick={() => setIsNotificationOpen(!isNotificationOpen)}
                 className={`p-2 rounded-xl text-gray-400 relative bg-white border border-gray-200 shadow-sm transition-all hover:bg-gray-50 ${isNotificationOpen ? 'ring-2 ring-black border-black text-black' : ''}`}
               >
-                <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 17h5l-1.405-1.405A2.032 2.032 0 0118 14.158V11a6.002 6.002 0 00-4-5.659V5a2 2 0 10-4 0v.341C7.67 6.165 6 8.388 6 11v3.159c0 .538-.214 1.055-.595 1.436L4 17h5m6 0v1a3 3 0 11-6 0v-1m6 0H9" /></svg>
-                <span className="absolute top-2 right-2 w-2 h-2 bg-red-500 rounded-full border-2 border-white"></span>
+                <svg className="w-5 h-5 sm:w-6 sm:h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 17h5l-1.405-1.405A2.032 2.032 0 0118 14.158V11a6.002 6.002 0 00-4-5.659V5a2 2 0 10-4 0v.341C7.67 6.165 6 8.388 6 11v3.159c0 .538-.214 1.055-.595 1.436L4 17h5m6 0v1a3 3 0 11-6 0v-1m6 0H9" /></svg>
+                <span className="absolute top-1.5 right-1.5 sm:top-2 sm:right-2 w-2 h-2 bg-red-500 rounded-full border-2 border-white"></span>
               </button>
 
               {/* Notification Popover */}
               {isNotificationOpen && (
-                <div className="absolute right-0 mt-3 w-80 bg-white rounded-2xl border border-gray-100 shadow-2xl z-[100] animate-in slide-in-from-top-2 duration-200">
+                <div className="fixed sm:absolute left-4 right-4 sm:left-auto sm:right-0 mt-3 sm:w-80 bg-white rounded-2xl border border-gray-100 shadow-2xl z-[100] animate-in slide-in-from-top-2 duration-200">
                   <div className="p-4 border-b border-gray-50 flex justify-between items-center">
                     <h4 className="font-bold text-sm">알림 및 이슈</h4>
                     <span className="text-[10px] bg-red-50 text-red-500 px-2 py-0.5 rounded-full font-bold">2 NEW</span>

@@ -45,25 +45,25 @@ const CommentManager: React.FC = () => {
   };
 
   return (
-    <div className="space-y-6">
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-        <div className="bg-white p-6 rounded-2xl border border-gray-100 shadow-sm border-l-4 border-l-black">
-          <p className="text-gray-400 text-xs font-bold uppercase mb-1">전체 활성 댓글</p>
-          <h3 className="text-2xl font-bold">{activeComments.filter(c => !c.isDeleted).length}건</h3>
+    <div className="space-y-4 sm:space-y-6">
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 sm:gap-6">
+        <div className="bg-white p-4 sm:p-6 rounded-2xl border border-gray-100 shadow-sm border-l-4 border-l-black">
+          <p className="text-gray-400 text-[10px] sm:text-xs font-bold uppercase mb-1">전체 활성 댓글</p>
+          <h3 className="text-xl sm:text-2xl font-bold">{activeComments.filter(c => !c.isDeleted).length}건</h3>
         </div>
-        <div className="bg-white p-6 rounded-2xl border border-gray-100 shadow-sm border-l-4 border-l-red-500">
-          <p className="text-gray-400 text-xs font-bold uppercase mb-1">검토 필요 (신고 3회+)</p>
-          <h3 className="text-2xl font-bold text-red-500">{activeComments.filter(c => c.reportCount >= 3 && !c.isDeleted).length}건</h3>
+        <div className="bg-white p-4 sm:p-6 rounded-2xl border border-gray-100 shadow-sm border-l-4 border-l-red-500">
+          <p className="text-gray-400 text-[10px] sm:text-xs font-bold uppercase mb-1">검토 필요 (신고 3회+)</p>
+          <h3 className="text-xl sm:text-2xl font-bold text-red-500">{activeComments.filter(c => c.reportCount >= 3 && !c.isDeleted).length}건</h3>
         </div>
-        <div className="bg-white p-6 rounded-2xl border border-gray-100 shadow-sm border-l-4 border-l-blue-500">
-          <p className="text-gray-400 text-xs font-bold uppercase mb-1">최근 24시간 작성</p>
-          <h3 className="text-2xl font-bold text-blue-500">128건</h3>
+        <div className="bg-white p-4 sm:p-6 rounded-2xl border border-gray-100 shadow-sm border-l-4 border-l-blue-500">
+          <p className="text-gray-400 text-[10px] sm:text-xs font-bold uppercase mb-1">최근 24시간 작성</p>
+          <h3 className="text-xl sm:text-2xl font-bold text-blue-500">128건</h3>
         </div>
       </div>
 
       <div className="bg-white rounded-2xl border border-gray-100 shadow-sm overflow-hidden">
-        <div className="p-6 border-b border-gray-100 flex justify-between items-center bg-gray-50/50">
-          <h3 className="font-bold">최근 댓글 피드</h3>
+        <div className="p-4 sm:p-6 border-b border-gray-100 flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3 sm:gap-0 bg-gray-50/50">
+          <h3 className="font-bold text-sm sm:text-base">최근 댓글 피드</h3>
           <div className="flex bg-white p-1 rounded-xl border border-gray-100 shadow-sm">
             <button 
               onClick={() => setFilter('all')}
@@ -81,14 +81,14 @@ const CommentManager: React.FC = () => {
         </div>
         <div className="divide-y divide-gray-50">
           {filteredComments.sort((a,b) => b.reportCount - a.reportCount).map((comment) => (
-            <div key={comment.id} className={`p-6 transition-colors flex items-start gap-4 ${comment.isDeleted ? 'bg-gray-50/50 grayscale-[0.5]' : 'hover:bg-gray-50/50'}`}>
-              <div className="w-10 h-10 rounded-xl bg-gray-100 flex items-center justify-center font-bold text-gray-400 flex-shrink-0">
+            <div key={comment.id} className={`p-4 sm:p-6 transition-colors flex items-start gap-3 sm:gap-4 ${comment.isDeleted ? 'bg-gray-50/50 grayscale-[0.5]' : 'hover:bg-gray-50/50'}`}>
+              <div className="w-8 h-8 sm:w-10 sm:h-10 rounded-xl bg-gray-100 flex items-center justify-center font-bold text-sm sm:text-base text-gray-400 flex-shrink-0">
                 {comment.username[0].toUpperCase()}
               </div>
               <div className="flex-1 min-w-0">
-                <div className="flex items-center gap-3 mb-1">
-                  <span className={`font-bold text-sm ${comment.isDeleted ? 'text-gray-400' : 'text-gray-900'}`}>{comment.username}</span>
-                  <span className="text-[10px] text-gray-400 tabular-nums">{comment.createdAt}</span>
+                <div className="flex flex-wrap items-center gap-2 sm:gap-3 mb-1">
+                  <span className={`font-bold text-xs sm:text-sm ${comment.isDeleted ? 'text-gray-400' : 'text-gray-900'}`}>{comment.username}</span>
+                  <span className="text-[9px] sm:text-[10px] text-gray-400 tabular-nums">{comment.createdAt}</span>
                   {comment.reportCount > 0 && !comment.isDeleted && (
                     <span className={`text-[10px] font-bold px-2 py-0.5 rounded-full ${comment.reportCount >= 10 ? 'bg-red-500 text-white' : 'bg-red-50 text-red-500'}`}>
                       REPORTED {comment.reportCount}
@@ -100,26 +100,26 @@ const CommentManager: React.FC = () => {
                     </span>
                   )}
                 </div>
-                <p className={`text-sm mb-4 leading-relaxed ${comment.isDeleted ? 'text-gray-300 line-through' : 'text-gray-600'}`}>
+                <p className={`text-xs sm:text-sm mb-3 sm:mb-4 leading-relaxed ${comment.isDeleted ? 'text-gray-300 line-through' : 'text-gray-600'}`}>
                   {comment.content}
                 </p>
-                <div className="flex items-center gap-6">
+                <div className="flex flex-wrap items-center gap-4 sm:gap-6">
                   {comment.isDeleted ? (
-                    <button onClick={() => toggleSoftDelete(comment.id)} className="text-[11px] font-bold text-blue-500 hover:text-blue-700 transition-colors flex items-center gap-1">
-                      <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" /></svg>
+                    <button onClick={() => toggleSoftDelete(comment.id)} className="text-[10px] sm:text-[11px] font-bold text-blue-500 hover:text-blue-700 transition-colors flex items-center gap-1">
+                      <svg className="w-3 h-3 sm:w-3.5 sm:h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" /></svg>
                       삭제 복구
                     </button>
                   ) : (
-                    <button onClick={() => toggleSoftDelete(comment.id)} className="text-[11px] font-bold text-red-500 hover:text-red-700 transition-colors flex items-center gap-1">
-                      <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" /></svg>
+                    <button onClick={() => toggleSoftDelete(comment.id)} className="text-[10px] sm:text-[11px] font-bold text-red-500 hover:text-red-700 transition-colors flex items-center gap-1">
+                      <svg className="w-3 h-3 sm:w-3.5 sm:h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" /></svg>
                       삭제 처리
                     </button>
                   )}
-                  <button 
+                  <button
                     onClick={() => setThreadViewId(comment.id)}
-                    className="text-[11px] font-bold text-gray-400 hover:text-black transition-colors flex items-center gap-1"
+                    className="text-[10px] sm:text-[11px] font-bold text-gray-400 hover:text-black transition-colors flex items-center gap-1"
                   >
-                    <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z" /></svg>
+                    <svg className="w-3 h-3 sm:w-3.5 sm:h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z" /></svg>
                     맥락 확인
                   </button>
                 </div>
@@ -132,11 +132,11 @@ const CommentManager: React.FC = () => {
       {/* Thread Viewer Modal */}
       {threadViewId && (
         <div className="fixed inset-0 z-[200] flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm animate-in fade-in duration-200">
-          <div className="bg-white w-full max-w-2xl rounded-3xl shadow-2xl overflow-hidden flex flex-col max-h-[80vh]">
-            <div className="p-6 border-b border-gray-100 flex justify-between items-center">
+          <div className="bg-white w-full max-w-2xl rounded-2xl sm:rounded-3xl shadow-2xl overflow-hidden flex flex-col max-h-[85vh] sm:max-h-[80vh]">
+            <div className="p-4 sm:p-6 border-b border-gray-100 flex justify-between items-center">
               <div>
-                <h3 className="text-lg font-bold">댓글 맥락 트래킹</h3>
-                <p className="text-xs text-gray-400 mt-0.5">선택한 댓글의 전후 대화를 확인합니다.</p>
+                <h3 className="text-base sm:text-lg font-bold">댓글 맥락 트래킹</h3>
+                <p className="text-[10px] sm:text-xs text-gray-400 mt-0.5">선택한 댓글의 전후 대화를 확인합니다.</p>
               </div>
               <button onClick={() => setThreadViewId(null)} className="p-2 hover:bg-gray-100 rounded-xl transition-colors">
                 <svg className="w-6 h-6 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" /></svg>

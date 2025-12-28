@@ -236,13 +236,13 @@ const QuestionManager: React.FC = () => {
 
   return (
     <DndContext onDragStart={handleDragStart} onDragEnd={handleDragEnd}>
-      <div className="space-y-6">
+      <div className="space-y-4 sm:space-y-6">
         {/* Header Controls */}
-        <div className="bg-white p-6 rounded-2xl border border-gray-100 shadow-sm flex flex-col md:flex-row justify-between items-center gap-4">
-          <div className="flex gap-2 bg-gray-50 p-1 rounded-xl">
+        <div className="bg-white p-4 sm:p-6 rounded-2xl border border-gray-100 shadow-sm flex flex-col gap-4">
+          <div className="flex gap-2 bg-gray-50 p-1 rounded-xl w-full sm:w-auto">
             <button
               onClick={() => setViewMode('calendar')}
-              className={`px-6 py-2 rounded-lg text-sm font-semibold transition-all ${
+              className={`flex-1 sm:flex-none px-4 sm:px-6 py-2 rounded-lg text-xs sm:text-sm font-semibold transition-all ${
                 viewMode === 'calendar' ? 'bg-white shadow-md text-black' : 'text-gray-400'
               }`}
             >
@@ -250,7 +250,7 @@ const QuestionManager: React.FC = () => {
             </button>
             <button
               onClick={() => setViewMode('list')}
-              className={`px-6 py-2 rounded-lg text-sm font-semibold transition-all ${
+              className={`flex-1 sm:flex-none px-4 sm:px-6 py-2 rounded-lg text-xs sm:text-sm font-semibold transition-all ${
                 viewMode === 'list' ? 'bg-white shadow-md text-black' : 'text-gray-400'
               }`}
             >
@@ -258,13 +258,13 @@ const QuestionManager: React.FC = () => {
             </button>
           </div>
 
-          <div className="flex items-center gap-3">
-            <div className="flex items-center gap-2">
+          <div className="flex items-center gap-2 sm:gap-3 overflow-x-auto pb-1">
+            <div className="flex items-center gap-2 flex-nowrap">
               {['전체', ...Object.values(QuestionStatus)].map((status) => (
                 <button
                   key={status}
                   onClick={() => setStatusFilter(status as any)}
-                  className={`px-4 py-2 rounded-full text-xs font-bold transition-all ${
+                  className={`px-3 sm:px-4 py-1.5 sm:py-2 rounded-full text-[10px] sm:text-xs font-bold transition-all whitespace-nowrap ${
                     statusFilter === status ? 'bg-black text-white' : 'bg-white border border-gray-200 text-gray-500'
                   }`}
                 >
@@ -278,9 +278,9 @@ const QuestionManager: React.FC = () => {
         {viewMode === 'calendar' ? (
           <>
         {/* Main Layout: Calendar (left) + Detail Panel (right) */}
-        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+        <div className="grid grid-cols-1 lg:grid-cols-3 gap-4 sm:gap-6">
           {/* Calendar Section - Compact */}
-          <div className="lg:col-span-2 bg-white p-6 rounded-2xl border border-gray-100 shadow-sm">
+          <div className="lg:col-span-2 bg-white p-4 sm:p-6 rounded-2xl border border-gray-100 shadow-sm">
             {/* Calendar Header with Navigation */}
             <div className="flex items-center justify-between mb-4">
               <button
@@ -340,9 +340,9 @@ const QuestionManager: React.FC = () => {
           </div>
 
           {/* Detail Panel - Inline Editing */}
-          <div className="bg-white p-6 rounded-2xl border border-gray-100 shadow-sm h-fit sticky top-6">
+          <div className="bg-white p-4 sm:p-6 rounded-2xl border border-gray-100 shadow-sm h-fit lg:sticky lg:top-6">
             <div className="flex justify-between items-center mb-4">
-              <h4 className="font-bold text-sm text-gray-400">{selectedDate} 질문</h4>
+              <h4 className="font-bold text-xs sm:text-sm text-gray-400">{selectedDate} 질문</h4>
               {selectedDateQuestion && (
                 <button
                   onClick={() => isEditing ? saveEdit() : setIsEditing(true)}
@@ -447,19 +447,19 @@ const QuestionManager: React.FC = () => {
         </div>
 
         {/* Unscheduled Questions Pool */}
-        <div className="bg-white p-6 rounded-2xl border border-gray-100 shadow-sm">
-          <div className="flex justify-between items-center mb-4">
+        <div className="bg-white p-4 sm:p-6 rounded-2xl border border-gray-100 shadow-sm">
+          <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3 mb-4">
             <div>
-              <h3 className="text-lg font-bold">일정 미지정 질문</h3>
-              <p className="text-xs text-gray-500">드래그하여 캘린더에 배치하세요</p>
+              <h3 className="text-base sm:text-lg font-bold">일정 미지정 질문</h3>
+              <p className="text-[10px] sm:text-xs text-gray-500">드래그하여 캘린더에 배치하세요</p>
             </div>
-            <div className="bg-black text-white px-4 py-2 rounded-xl">
-              <span className="text-2xl font-bold">{unscheduledQuestions.length}</span>
-              <span className="text-xs ml-1">건</span>
+            <div className="bg-black text-white px-3 sm:px-4 py-2 rounded-xl">
+              <span className="text-xl sm:text-2xl font-bold">{unscheduledQuestions.length}</span>
+              <span className="text-[10px] sm:text-xs ml-1">건</span>
             </div>
           </div>
 
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-3 sm:gap-4">
             {unscheduledQuestions.map(question => (
               <DraggableQuestionCard key={question.id} question={question} />
             ))}
@@ -475,83 +475,149 @@ const QuestionManager: React.FC = () => {
         </>
         ) : (
           /* List View */
-          <div className="bg-white rounded-2xl border border-gray-100 shadow-sm overflow-hidden">
-            <table className="w-full text-left">
-              <thead className="bg-gray-50 border-b border-gray-100">
-                <tr>
-                  <th className="px-6 py-4 text-xs font-bold text-gray-400 uppercase">제목</th>
-                  <th className="px-6 py-4 text-xs font-bold text-gray-400 uppercase">카테고리</th>
-                  <th className="px-6 py-4 text-xs font-bold text-gray-400 uppercase">상태</th>
-                  <th className="px-6 py-4 text-xs font-bold text-gray-400 uppercase">공개 일시</th>
-                  <th className="px-6 py-4 text-xs font-bold text-gray-400 uppercase text-right">도파민</th>
-                  <th className="px-6 py-4 text-xs font-bold text-gray-400 uppercase text-center">작업</th>
-                </tr>
-              </thead>
-              <tbody className="divide-y divide-gray-50">
-                {filteredQuestions.map(q => (
-                  <tr key={q.id} className="hover:bg-gray-50/50 transition-colors">
-                    <td className="px-6 py-4">
-                      <div className="font-bold text-sm">{q.title}</div>
-                      <div className="text-xs text-gray-400 line-clamp-1">{q.description}</div>
-                    </td>
-                    <td className="px-6 py-4">
-                      <span className="text-xs font-bold px-2 py-1 rounded bg-blue-50 text-blue-600">
-                        {q.category}
-                      </span>
-                    </td>
-                    <td className="px-6 py-4">
-                      <span className={`px-3 py-1 rounded-full text-[10px] font-bold ${
-                        q.status === QuestionStatus.PUBLISHED ? 'bg-green-50 text-green-600' :
-                        q.status === QuestionStatus.CLOSED ? 'bg-gray-100 text-gray-500' :
-                        'bg-yellow-50 text-yellow-600'
-                      }`}>
-                        {q.status}
-                      </span>
-                    </td>
-                    <td className="px-6 py-4 text-sm text-gray-500 tabular-nums">
-                      {q.publish_at ? new Date(q.publish_at).toLocaleString('ko-KR', {
-                        year: 'numeric',
-                        month: '2-digit',
-                        day: '2-digit',
-                        hour: '2-digit',
-                        minute: '2-digit'
-                      }) : (
-                        <span className="text-gray-400 italic">미지정</span>
-                      )}
-                    </td>
-                    <td className="px-6 py-4 text-sm font-bold text-right text-blue-600 italic">
-                      🔥 {q.dopamine_score || 0}
-                    </td>
-                    <td className="px-6 py-4 text-center">
-                      <div className="flex justify-center gap-3">
-                        <button
-                          onClick={() => {
-                            const dateStr = q.publish_at?.split('T')[0] || '2024-05-15';
-                            setSelectedDate(dateStr);
-                            setViewMode('calendar');
-                          }}
-                          className="text-gray-400 hover:text-black font-bold text-xs"
-                        >
-                          EDIT
-                        </button>
-                        <button
-                          onClick={() => deleteQuestion(q.id)}
-                          className="text-red-400 hover:text-red-600 font-bold text-xs"
-                        >
-                          DEL
-                        </button>
-                      </div>
-                    </td>
+          <>
+            {/* Desktop Table View */}
+            <div className="hidden md:block bg-white rounded-2xl border border-gray-100 shadow-sm overflow-hidden">
+              <table className="w-full text-left">
+                <thead className="bg-gray-50 border-b border-gray-100">
+                  <tr>
+                    <th className="px-6 py-4 text-xs font-bold text-gray-400 uppercase">제목</th>
+                    <th className="px-6 py-4 text-xs font-bold text-gray-400 uppercase">카테고리</th>
+                    <th className="px-6 py-4 text-xs font-bold text-gray-400 uppercase">상태</th>
+                    <th className="px-6 py-4 text-xs font-bold text-gray-400 uppercase">공개 일시</th>
+                    <th className="px-6 py-4 text-xs font-bold text-gray-400 uppercase text-right">도파민</th>
+                    <th className="px-6 py-4 text-xs font-bold text-gray-400 uppercase text-center">작업</th>
                   </tr>
-                ))}
-              </tbody>
-            </table>
-            {filteredQuestions.length === 0 && (
-              <div className="text-center py-12 text-gray-400">
-                <p className="font-bold">필터에 맞는 질문이 없습니다</p>
-              </div>
-            )}
-          </div>
+                </thead>
+                <tbody className="divide-y divide-gray-50">
+                  {filteredQuestions.map(q => (
+                    <tr key={q.id} className="hover:bg-gray-50/50 transition-colors">
+                      <td className="px-6 py-4">
+                        <div className="font-bold text-sm">{q.title}</div>
+                        <div className="text-xs text-gray-400 line-clamp-1">{q.description}</div>
+                      </td>
+                      <td className="px-6 py-4">
+                        <span className="text-xs font-bold px-2 py-1 rounded bg-blue-50 text-blue-600">
+                          {q.category}
+                        </span>
+                      </td>
+                      <td className="px-6 py-4">
+                        <span className={`px-3 py-1 rounded-full text-[10px] font-bold ${
+                          q.status === QuestionStatus.PUBLISHED ? 'bg-green-50 text-green-600' :
+                          q.status === QuestionStatus.CLOSED ? 'bg-gray-100 text-gray-500' :
+                          'bg-yellow-50 text-yellow-600'
+                        }`}>
+                          {q.status}
+                        </span>
+                      </td>
+                      <td className="px-6 py-4 text-sm text-gray-500 tabular-nums">
+                        {q.publish_at ? new Date(q.publish_at).toLocaleString('ko-KR', {
+                          year: 'numeric',
+                          month: '2-digit',
+                          day: '2-digit',
+                          hour: '2-digit',
+                          minute: '2-digit'
+                        }) : (
+                          <span className="text-gray-400 italic">미지정</span>
+                        )}
+                      </td>
+                      <td className="px-6 py-4 text-sm font-bold text-right text-blue-600 italic">
+                        🔥 {q.dopamine_score || 0}
+                      </td>
+                      <td className="px-6 py-4 text-center">
+                        <div className="flex justify-center gap-3">
+                          <button
+                            onClick={() => {
+                              const dateStr = q.publish_at?.split('T')[0] || '2024-05-15';
+                              setSelectedDate(dateStr);
+                              setViewMode('calendar');
+                            }}
+                            className="text-gray-400 hover:text-black font-bold text-xs"
+                          >
+                            EDIT
+                          </button>
+                          <button
+                            onClick={() => deleteQuestion(q.id)}
+                            className="text-red-400 hover:text-red-600 font-bold text-xs"
+                          >
+                            DEL
+                          </button>
+                        </div>
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+              {filteredQuestions.length === 0 && (
+                <div className="text-center py-12 text-gray-400">
+                  <p className="font-bold">필터에 맞는 질문이 없습니다</p>
+                </div>
+              )}
+            </div>
+
+            {/* Mobile Card View */}
+            <div className="md:hidden space-y-3">
+              {filteredQuestions.map(q => (
+                <div key={q.id} className="bg-white p-4 rounded-2xl border border-gray-100 shadow-sm">
+                  <div className="flex items-start justify-between gap-2 mb-3">
+                    <div className="flex-1 min-w-0">
+                      <h3 className="font-bold text-sm mb-1 line-clamp-2">{q.title}</h3>
+                      <p className="text-xs text-gray-500 line-clamp-2">{q.description}</p>
+                    </div>
+                    <span className="text-xs font-bold text-blue-600 italic whitespace-nowrap">
+                      🔥 {q.dopamine_score || 0}
+                    </span>
+                  </div>
+
+                  <div className="flex flex-wrap items-center gap-2 mb-3">
+                    <span className="text-[10px] font-bold px-2 py-1 rounded bg-blue-50 text-blue-600">
+                      {q.category}
+                    </span>
+                    <span className={`px-2 py-1 rounded-full text-[10px] font-bold ${
+                      q.status === QuestionStatus.PUBLISHED ? 'bg-green-50 text-green-600' :
+                      q.status === QuestionStatus.CLOSED ? 'bg-gray-100 text-gray-500' :
+                      'bg-yellow-50 text-yellow-600'
+                    }`}>
+                      {q.status}
+                    </span>
+                  </div>
+
+                  <div className="text-xs text-gray-400 mb-3">
+                    {q.publish_at ? new Date(q.publish_at).toLocaleString('ko-KR', {
+                      month: '2-digit',
+                      day: '2-digit',
+                      hour: '2-digit',
+                      minute: '2-digit'
+                    }) : '미지정'}
+                  </div>
+
+                  <div className="flex gap-2">
+                    <button
+                      onClick={() => {
+                        const dateStr = q.publish_at?.split('T')[0] || '2024-05-15';
+                        setSelectedDate(dateStr);
+                        setViewMode('calendar');
+                      }}
+                      className="flex-1 py-2 text-xs font-bold text-gray-500 bg-gray-50 rounded-lg hover:bg-gray-100 transition-colors"
+                    >
+                      편집
+                    </button>
+                    <button
+                      onClick={() => deleteQuestion(q.id)}
+                      className="flex-1 py-2 text-xs font-bold text-red-500 bg-red-50 rounded-lg hover:bg-red-100 transition-colors"
+                    >
+                      삭제
+                    </button>
+                  </div>
+                </div>
+              ))}
+              {filteredQuestions.length === 0 && (
+                <div className="bg-white rounded-2xl border border-gray-100 p-12 text-center text-gray-400">
+                  <p className="font-bold">필터에 맞는 질문이 없습니다</p>
+                </div>
+              )}
+            </div>
+          </>
         )}
       </div>
 
