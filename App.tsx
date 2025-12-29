@@ -106,28 +106,28 @@ const App: React.FC = () => {
 
       {/* Main Content */}
       <main className={`${isSidebarCollapsed ? 'lg:ml-20' : 'lg:ml-64'} flex-1 p-4 sm:p-6 lg:p-8 transition-all duration-300`}>
-        <header className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 mb-6 lg:mb-8">
-          <div className="flex items-center gap-3 w-full sm:w-auto">
+        <header className="flex flex-row justify-between items-center gap-4 mb-6 lg:mb-8">
+          <div className="flex items-center gap-3 flex-1 min-w-0">
             {/* Mobile Hamburger Menu */}
             <button
               onClick={() => setIsMobileSidebarOpen(true)}
-              className="lg:hidden p-2 hover:bg-gray-100 rounded-lg transition-colors"
+              className="lg:hidden p-2 hover:bg-gray-100 rounded-lg transition-colors flex-shrink-0"
             >
               <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 6h16M4 12h16M4 18h16" />
               </svg>
             </button>
-            <div className="flex-1">
-              <h1 className="text-xl sm:text-2xl font-bold text-gray-900">
+            <div className="flex-1 min-w-0">
+              <h1 className="text-lg sm:text-2xl font-bold text-gray-900 truncate">
                 {menuItems.find(m => m.id === currentView)?.name}
               </h1>
-              <p className="text-gray-500 text-xs sm:text-sm mt-1 uppercase tracking-wider font-semibold">
+              <p className="text-gray-500 text-[10px] sm:text-sm mt-0.5 sm:mt-1 uppercase tracking-wider font-semibold truncate hidden sm:block">
                 Admin Control Panel / {currentView}
               </p>
             </div>
           </div>
 
-          <div className="flex items-center gap-2 sm:gap-4 relative w-full sm:w-auto justify-end">
+          <div className="flex items-center gap-2 sm:gap-4 relative flex-shrink-0">
             <div className="hidden sm:flex bg-white border border-gray-200 rounded-xl px-3 sm:px-4 py-2 items-center gap-2 sm:gap-3 shadow-sm">
               <span className="w-2 h-2 bg-green-500 rounded-full animate-pulse"></span>
               <span className="text-[10px] sm:text-xs font-bold text-gray-500 hidden md:inline">SYSTEM ONLINE</span>
