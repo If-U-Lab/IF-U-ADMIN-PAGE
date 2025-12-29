@@ -120,6 +120,7 @@ const QuestionManager: React.FC = () => {
   const today = new Date();
   const [currentYear, setCurrentYear] = useState(today.getFullYear());
   const [currentMonth, setCurrentMonth] = useState(today.getMonth()); // 0-indexed
+  const [currentWeekOffset, setCurrentWeekOffset] = useState(0); // 0 = this week, -1 = last week, 1 = next week
 
   const [questions, setQuestions] = useState<Question[]>(INITIAL_MOCK_QUESTIONS);
   const [selectedDate, setSelectedDate] = useState<string>(
@@ -129,6 +130,12 @@ const QuestionManager: React.FC = () => {
   const [activeDragId, setActiveDragId] = useState<number | null>(null);
   const [viewMode, setViewMode] = useState<'calendar' | 'list'>('calendar');
   const [statusFilter, setStatusFilter] = useState<QuestionStatus | '전체'>('전체');
+  const [editingQuestionId, setEditingQuestionId] = useState<number | null>(null);
+  const [editingListQuestion, setEditingListQuestion] = useState<Question | null>(null);
+  const [mobileEditQuestion, setMobileEditQuestion] = useState<Question | null>(null);
+  const [editPublishDate, setEditPublishDate] = useState<string>('');
+  const [editPublishTime, setEditPublishTime] = useState<string>('09:00');
+  const [editCloseTime, setEditCloseTime] = useState<string>('23:59');
 
   // Unscheduled questions: status=DRAFT AND publish_at=null
   const unscheduledQuestions = questions.filter(
@@ -178,10 +185,52 @@ const QuestionManager: React.FC = () => {
     setCurrentYear(now.getFullYear());
     setCurrentMonth(now.getMonth());
     setSelectedDate(todayString);
+    setCurrentWeekOffset(0);
   };
+
+  // Week navigation
+  const getWeekDates = (offset: number) => {
+    const baseDate = new Date(today);
+    baseDate.setDate(baseDate.getDate() + offset * 7);
+
+    const day = baseDate.getDay();
+    const weekStart = new Date(baseDate);
+    weekStart.setDate(baseDate.getDate() - day);
+
+    const dates = [];
+    for (let i = 0; i < 7; i++) {
+      const date = new Date(weekStart);
+      date.setDate(weekStart.getDate() + i);
+      dates.push(date);
+    }
+    return dates;
+  };
+
+  const goToPreviousWeek = () => {
+    setCurrentWeekOffset(currentWeekOffset - 1);
+  };
+
+  const goToNextWeek = () => {
+    setCurrentWeekOffset(currentWeekOffset + 1);
+  };
+
+  const goToThisWeek = () => {
+    setCurrentWeekOffset(0);
+  };
+
+  const weekDates = getWeekDates(currentWeekOffset);
+  const weekStartDate = weekDates[0];
+  const weekEndDate = weekDates[6];
 
   // Month names in Korean
   const monthNames = ['1월', '2월', '3월', '4월', '5월', '6월', '7월', '8월', '9월', '10월', '11월', '12월'];
+  const dayNames = ['일', '월', '화', '수', '목', '금', '토'];
+
+  // Hour options for time selection (24-hour format)
+  const hourOptions = Array.from({ length: 24 }, (_, i) => {
+    const hour = String(i).padStart(2, '0');
+    return `${hour}:00`;
+  });
 
   // Drag and drop handlers
   const handleDragStart = (event: any) => {
@@ -223,9 +272,40 @@ const QuestionManager: React.FC = () => {
     ));
   };
 
+  const startCalendarEdit = () => {
+    if (!selectedDateQuestion) return;
+
+    if (selectedDateQuestion.publish_at) {
+      const dateTime = new Date(selectedDateQuestion.publish_at);
+      const closeTime = selectedDateQuestion.close_at ? new Date(selectedDateQuestion.close_at) : dateTime;
+
+      setEditPublishDate(selectedDateQuestion.publish_at.split('T')[0]);
+      setEditPublishTime(`${String(dateTime.getHours()).padStart(2, '0')}:${String(dateTime.getMinutes()).padStart(2, '0')}`);
+      setEditCloseTime(`${String(closeTime.getHours()).padStart(2, '0')}:${String(closeTime.getMinutes()).padStart(2, '0')}`);
+    } else {
+      setEditPublishDate(todayString);
+      setEditPublishTime('09:00');
+      setEditCloseTime('23:59');
+    }
+
+    setIsEditing(true);
+  };
+
   const saveEdit = () => {
+    if (!selectedDateQuestion) return;
+
+    setQuestions(questions.map(q => {
+      if (q.id === selectedDateQuestion.id) {
+        return {
+          ...selectedDateQuestion,
+          publish_at: editPublishDate ? `${editPublishDate}T${editPublishTime}:00+09:00` : null,
+          close_at: editPublishDate ? `${editPublishDate}T${editCloseTime}:00+09:00` : null
+        };
+      }
+      return q;
+    }));
+
     setIsEditing(false);
-    console.log('Changes saved:', selectedDateQuestion);
   };
 
   const deleteQuestion = (id: number) => {
@@ -234,43 +314,133 @@ const QuestionManager: React.FC = () => {
     }
   };
 
+  // Mobile modal handlers
+  const openMobileEdit = (question: Question, isFromUnscheduled = false) => {
+    setMobileEditQuestion({ ...question });
+
+    if (question.publish_at) {
+      const dateTime = new Date(question.publish_at);
+      const closeTime = question.close_at ? new Date(question.close_at) : dateTime;
+
+      setEditPublishDate(question.publish_at.split('T')[0]);
+      setEditPublishTime(`${String(dateTime.getHours()).padStart(2, '0')}:${String(dateTime.getMinutes()).padStart(2, '0')}`);
+      setEditCloseTime(`${String(closeTime.getHours()).padStart(2, '0')}:${String(closeTime.getMinutes()).padStart(2, '0')}`);
+    } else {
+      setEditPublishDate(todayString);
+      setEditPublishTime('09:00');
+      setEditCloseTime('23:59');
+    }
+  };
+
+  const updateMobileQuestion = (updates: Partial<Question>) => {
+    if (!mobileEditQuestion) return;
+    setMobileEditQuestion({ ...mobileEditQuestion, ...updates });
+  };
+
+  const saveMobileEdit = () => {
+    if (!mobileEditQuestion) return;
+
+    setQuestions(questions.map(q => {
+      if (q.id === mobileEditQuestion.id) {
+        return {
+          ...mobileEditQuestion,
+          publish_at: editPublishDate ? `${editPublishDate}T${editPublishTime}:00+09:00` : null,
+          close_at: editPublishDate ? `${editPublishDate}T${editCloseTime}:00+09:00` : null
+        };
+      }
+      return q;
+    }));
+
+    setMobileEditQuestion(null);
+  };
+
+  const cancelMobileEdit = () => {
+    setMobileEditQuestion(null);
+  };
+
+  // List view inline editing handlers
+  const startListEdit = (question: Question) => {
+    setEditingListQuestion({ ...question });
+
+    if (question.publish_at) {
+      const dateTime = new Date(question.publish_at);
+      const closeTime = question.close_at ? new Date(question.close_at) : dateTime;
+
+      setEditPublishDate(question.publish_at.split('T')[0]);
+      setEditPublishTime(`${String(dateTime.getHours()).padStart(2, '0')}:${String(dateTime.getMinutes()).padStart(2, '0')}`);
+      setEditCloseTime(`${String(closeTime.getHours()).padStart(2, '0')}:${String(closeTime.getMinutes()).padStart(2, '0')}`);
+    } else {
+      setEditPublishDate(todayString);
+      setEditPublishTime('09:00');
+      setEditCloseTime('23:59');
+    }
+  };
+
+  const updateListQuestion = (updates: Partial<Question>) => {
+    if (!editingListQuestion) return;
+    setEditingListQuestion({ ...editingListQuestion, ...updates });
+  };
+
+  const saveListEdit = () => {
+    if (!editingListQuestion) return;
+    setQuestions(questions.map(q => {
+      if (q.id === editingListQuestion.id) {
+        return {
+          ...editingListQuestion,
+          publish_at: editPublishDate ? `${editPublishDate}T${editPublishTime}:00+09:00` : null,
+          close_at: editPublishDate ? `${editPublishDate}T${editCloseTime}:00+09:00` : null
+        };
+      }
+      return q;
+    }));
+    setEditingListQuestion(null);
+  };
+
+  const cancelListEdit = () => {
+    setEditingListQuestion(null);
+  };
+
   return (
     <DndContext onDragStart={handleDragStart} onDragEnd={handleDragEnd}>
       <div className="space-y-4 sm:space-y-6">
         {/* Header Controls */}
-        <div className="bg-white p-4 sm:p-6 rounded-2xl border border-gray-100 shadow-sm flex flex-col gap-4">
-          <div className="flex gap-2 bg-gray-50 p-1 rounded-xl w-full sm:w-auto">
-            <button
-              onClick={() => setViewMode('calendar')}
-              className={`flex-1 sm:flex-none px-4 sm:px-6 py-2 rounded-lg text-xs sm:text-sm font-semibold transition-all ${
-                viewMode === 'calendar' ? 'bg-white shadow-md text-black' : 'text-gray-400'
-              }`}
-            >
-              캘린더
-            </button>
-            <button
-              onClick={() => setViewMode('list')}
-              className={`flex-1 sm:flex-none px-4 sm:px-6 py-2 rounded-lg text-xs sm:text-sm font-semibold transition-all ${
-                viewMode === 'list' ? 'bg-white shadow-md text-black' : 'text-gray-400'
-              }`}
-            >
-              리스트
-            </button>
-          </div>
+        <div className="bg-white p-4 sm:p-6 rounded-2xl border border-gray-100 shadow-sm">
+          <div className="flex flex-col sm:flex-row justify-between items-stretch sm:items-center gap-4">
+            {/* Left: View Mode Toggle */}
+            <div className="flex gap-2 bg-gray-50 p-1 rounded-xl w-full sm:w-auto">
+              <button
+                onClick={() => setViewMode('calendar')}
+                className={`flex-1 sm:flex-none px-4 sm:px-6 py-2 rounded-lg text-xs sm:text-sm font-semibold transition-all ${
+                  viewMode === 'calendar' ? 'bg-white shadow-md text-black' : 'text-gray-400'
+                }`}
+              >
+                캘린더
+              </button>
+              <button
+                onClick={() => setViewMode('list')}
+                className={`flex-1 sm:flex-none px-4 sm:px-6 py-2 rounded-lg text-xs sm:text-sm font-semibold transition-all ${
+                  viewMode === 'list' ? 'bg-white shadow-md text-black' : 'text-gray-400'
+                }`}
+              >
+                리스트
+              </button>
+            </div>
 
-          <div className="flex items-center gap-2 sm:gap-3 overflow-x-auto pb-1">
-            <div className="flex items-center gap-2 flex-nowrap">
-              {['전체', ...Object.values(QuestionStatus)].map((status) => (
-                <button
-                  key={status}
-                  onClick={() => setStatusFilter(status as any)}
-                  className={`px-3 sm:px-4 py-1.5 sm:py-2 rounded-full text-[10px] sm:text-xs font-bold transition-all whitespace-nowrap ${
-                    statusFilter === status ? 'bg-black text-white' : 'bg-white border border-gray-200 text-gray-500'
-                  }`}
-                >
-                  {status}
-                </button>
-              ))}
+            {/* Right: Status Filter */}
+            <div className="flex items-center gap-2 overflow-x-auto pb-1 sm:pb-0">
+              <div className="flex items-center gap-2 flex-nowrap">
+                {['전체', ...Object.values(QuestionStatus)].map((status) => (
+                  <button
+                    key={status}
+                    onClick={() => setStatusFilter(status as any)}
+                    className={`px-3 sm:px-4 py-1.5 sm:py-2 rounded-full text-[10px] sm:text-xs font-bold transition-all whitespace-nowrap ${
+                      statusFilter === status ? 'bg-black text-white' : 'bg-white border border-gray-200 text-gray-500'
+                    }`}
+                  >
+                    {status}
+                  </button>
+                ))}
+              </div>
             </div>
           </div>
         </div>
@@ -278,9 +448,9 @@ const QuestionManager: React.FC = () => {
         {viewMode === 'calendar' ? (
           <>
         {/* Main Layout: Calendar (left) + Detail Panel (right) */}
-        <div className="grid grid-cols-1 lg:grid-cols-3 gap-4 sm:gap-6">
-          {/* Calendar Section - Compact */}
-          <div className="lg:col-span-2 bg-white p-4 sm:p-6 rounded-2xl border border-gray-100 shadow-sm">
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-4 sm:gap-6 md:items-start">
+          {/* Desktop Calendar - Monthly */}
+          <div className="hidden md:flex md:flex-col md:col-span-2 bg-white p-4 sm:p-6 rounded-2xl border border-gray-100 shadow-sm">
             {/* Calendar Header with Navigation */}
             <div className="flex items-center justify-between mb-4">
               <button
@@ -312,7 +482,7 @@ const QuestionManager: React.FC = () => {
               </button>
             </div>
 
-            <div className="grid grid-cols-7 gap-px bg-gray-100 rounded-xl overflow-hidden border border-gray-100">
+            <div className="flex-1 grid grid-cols-7 gap-px bg-gray-100 rounded-xl overflow-hidden border border-gray-100 content-start">
               {['일', '월', '화', '수', '목', '금', '토'].map(d => (
                 <div key={d} className="bg-gray-50 p-2 text-center text-[10px] font-bold text-gray-400 uppercase">{d}</div>
               ))}
@@ -332,20 +502,131 @@ const QuestionManager: React.FC = () => {
                     isToday={isToday}
                     question={dayQuestion}
                     isSelected={selectedDate === dateStr}
-                    onSelect={() => isCurrent && setSelectedDate(dateStr)}
+                    onSelect={() => {
+                      if (isCurrent) {
+                        setSelectedDate(dateStr);
+                        // On mobile, open modal if there's a question
+                        if (window.innerWidth < 768 && dayQuestion) {
+                          openMobileEdit(dayQuestion);
+                        }
+                      }
+                    }}
                   />
                 );
               })}
             </div>
           </div>
 
-          {/* Detail Panel - Inline Editing */}
-          <div className="bg-white p-4 sm:p-6 rounded-2xl border border-gray-100 shadow-sm h-fit lg:sticky lg:top-6">
+          {/* Mobile Weekly Calendar */}
+          <div className="md:hidden bg-white p-4 rounded-2xl border border-gray-100 shadow-sm">
+            {/* Week Header */}
+            <div className="flex items-center justify-between mb-4">
+              <button onClick={goToPreviousWeek} className="p-2 hover:bg-gray-100 rounded-lg transition-all">
+                <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
+                </svg>
+              </button>
+
+              <div className="text-center">
+                <h3 className="text-sm font-bold">
+                  {weekStartDate.getMonth() === weekEndDate.getMonth()
+                    ? `${weekStartDate.getFullYear()}년 ${monthNames[weekStartDate.getMonth()]}`
+                    : `${weekStartDate.getFullYear()}년 ${monthNames[weekStartDate.getMonth()]} - ${monthNames[weekEndDate.getMonth()]}`}
+                </h3>
+                <p className="text-xs text-gray-400 mt-0.5">
+                  {weekStartDate.getDate()}일 ~ {weekEndDate.getDate()}일
+                </p>
+                {currentWeekOffset === 0 && (
+                  <span className="text-[10px] font-bold text-blue-600 bg-blue-50 px-2 py-0.5 rounded-full mt-1 inline-block">
+                    이번 주
+                  </span>
+                )}
+              </div>
+
+              <button onClick={goToNextWeek} className="p-2 hover:bg-gray-100 rounded-lg transition-all">
+                <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
+                </svg>
+              </button>
+            </div>
+
+            {currentWeekOffset !== 0 && (
+              <button
+                onClick={goToThisWeek}
+                className="w-full mb-3 text-xs font-bold px-3 py-1.5 rounded-lg bg-blue-50 text-blue-600 hover:bg-blue-100 transition-all"
+              >
+                이번 주로 이동
+              </button>
+            )}
+
+            {/* Weekly Days List */}
+            <div className="space-y-2">
+              {weekDates.map((date, idx) => {
+                const dateStr = `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}-${String(date.getDate()).padStart(2, '0')}`;
+                const dayQuestion = questions.find(q => q.publish_at?.startsWith(dateStr) && !q.isDeleted);
+                const isToday = dateStr === todayString;
+                const isSelected = dateStr === selectedDate;
+
+                return (
+                  <div
+                    key={idx}
+                    onClick={() => {
+                      setSelectedDate(dateStr);
+                      if (dayQuestion) {
+                        openMobileEdit(dayQuestion);
+                      }
+                    }}
+                    className={`p-3 rounded-xl border-2 transition-all cursor-pointer ${
+                      isSelected
+                        ? 'border-black bg-blue-50/50'
+                        : isToday
+                        ? 'border-blue-300 bg-blue-50/30'
+                        : dayQuestion
+                        ? 'border-gray-200 bg-white hover:border-gray-300'
+                        : 'border-gray-100 bg-gray-50'
+                    }`}
+                  >
+                    <div className="flex items-center justify-between mb-2">
+                      <div className="flex items-center gap-2">
+                        <span className={`text-xs font-bold px-2 py-0.5 rounded ${
+                          idx === 0 ? 'bg-red-100 text-red-600' : idx === 6 ? 'bg-blue-100 text-blue-600' : 'bg-gray-100 text-gray-600'
+                        }`}>
+                          {dayNames[idx]}
+                        </span>
+                        <span className={`text-lg font-bold ${isToday ? 'text-blue-600' : 'text-gray-900'}`}>
+                          {date.getDate()}
+                        </span>
+                      </div>
+                      {isToday && (
+                        <span className="text-[10px] font-bold text-blue-600 bg-blue-100 px-2 py-0.5 rounded-full">
+                          오늘
+                        </span>
+                      )}
+                    </div>
+
+                    {dayQuestion ? (
+                      <div className="bg-blue-500 text-white p-2 rounded-lg">
+                        <p className="text-xs font-bold mb-1 line-clamp-1">{dayQuestion.title}</p>
+                        <p className="text-[10px] opacity-90 line-clamp-1">{dayQuestion.description}</p>
+                      </div>
+                    ) : (
+                      <div className="text-center py-2 text-gray-300 text-xs">
+                        질문 없음
+                      </div>
+                    )}
+                  </div>
+                );
+              })}
+            </div>
+          </div>
+
+          {/* Detail Panel - Inline Editing (Desktop only) */}
+          <div className="hidden md:block bg-white p-4 sm:p-6 rounded-2xl border border-gray-100 shadow-sm h-fit md:sticky md:top-6">
             <div className="flex justify-between items-center mb-4">
               <h4 className="font-bold text-xs sm:text-sm text-gray-400">{selectedDate} 질문</h4>
               {selectedDateQuestion && (
                 <button
-                  onClick={() => isEditing ? saveEdit() : setIsEditing(true)}
+                  onClick={() => isEditing ? saveEdit() : startCalendarEdit()}
                   className={`text-xs font-bold px-3 py-1 rounded-lg transition-all ${
                     isEditing ? 'bg-black text-white' : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
                   }`}
@@ -430,6 +711,46 @@ const QuestionManager: React.FC = () => {
                   </select>
                 </div>
 
+                <div>
+                  <label className="text-[10px] font-bold text-gray-400 uppercase block mb-1">공개 날짜</label>
+                  <input
+                    type="date"
+                    value={editPublishDate}
+                    onChange={e => setEditPublishDate(e.target.value)}
+                    disabled={!isEditing}
+                    className="w-full p-2 text-xs border border-gray-200 rounded-lg focus:ring-2 focus:ring-black outline-none disabled:bg-gray-50 disabled:text-gray-600"
+                  />
+                </div>
+
+                <div className="grid grid-cols-2 gap-2">
+                  <div>
+                    <label className="text-[10px] font-bold text-gray-400 uppercase block mb-1">공개 시간</label>
+                    <select
+                      value={editPublishTime}
+                      onChange={e => setEditPublishTime(e.target.value)}
+                      disabled={!isEditing}
+                      className="w-full p-2 text-xs font-bold border border-gray-200 rounded-lg focus:ring-2 focus:ring-black outline-none disabled:bg-gray-50 disabled:text-gray-600"
+                    >
+                      {hourOptions.map(hour => (
+                        <option key={hour} value={hour}>{hour}</option>
+                      ))}
+                    </select>
+                  </div>
+                  <div>
+                    <label className="text-[10px] font-bold text-gray-400 uppercase block mb-1">마감 시간</label>
+                    <select
+                      value={editCloseTime}
+                      onChange={e => setEditCloseTime(e.target.value)}
+                      disabled={!isEditing}
+                      className="w-full p-2 text-xs font-bold border border-gray-200 rounded-lg focus:ring-2 focus:ring-black outline-none disabled:bg-gray-50 disabled:text-gray-600"
+                    >
+                      {hourOptions.map(hour => (
+                        <option key={hour} value={hour}>{hour}</option>
+                      ))}
+                    </select>
+                  </div>
+                </div>
+
                 <div className="pt-3 border-t border-gray-100">
                   <div className="text-[10px] text-gray-400 space-y-1">
                     <div>조회수: <span className="font-bold text-gray-600">{selectedDateQuestion.views || 0}</span></div>
@@ -461,7 +782,7 @@ const QuestionManager: React.FC = () => {
 
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-3 sm:gap-4">
             {unscheduledQuestions.map(question => (
-              <DraggableQuestionCard key={question.id} question={question} />
+              <DraggableQuestionCard key={question.id} question={question} onDatePick={openMobileEdit} />
             ))}
           </div>
 
@@ -476,8 +797,10 @@ const QuestionManager: React.FC = () => {
         ) : (
           /* List View */
           <>
-            {/* Desktop Table View */}
-            <div className="hidden md:block bg-white rounded-2xl border border-gray-100 shadow-sm overflow-hidden">
+            {/* Desktop: Table (left) + Edit Panel (right) */}
+            <div className="hidden md:grid md:grid-cols-3 gap-6">
+              {/* Table Section */}
+              <div className="md:col-span-2 bg-white rounded-2xl border border-gray-100 shadow-sm overflow-hidden">
               <table className="w-full text-left">
                 <thead className="bg-gray-50 border-b border-gray-100">
                   <tr>
@@ -491,7 +814,13 @@ const QuestionManager: React.FC = () => {
                 </thead>
                 <tbody className="divide-y divide-gray-50">
                   {filteredQuestions.map(q => (
-                    <tr key={q.id} className="hover:bg-gray-50/50 transition-colors">
+                    <tr
+                      key={q.id}
+                      onClick={() => startListEdit(q)}
+                      className={`cursor-pointer transition-colors ${
+                        editingListQuestion?.id === q.id ? 'bg-blue-50/50 ring-2 ring-inset ring-black' : 'hover:bg-gray-50'
+                      }`}
+                    >
                       <td className="px-6 py-4">
                         <div className="font-bold text-sm">{q.title}</div>
                         <div className="text-xs text-gray-400 line-clamp-1">{q.description}</div>
@@ -524,25 +853,13 @@ const QuestionManager: React.FC = () => {
                       <td className="px-6 py-4 text-sm font-bold text-right text-blue-600 italic">
                         🔥 {q.dopamine_score || 0}
                       </td>
-                      <td className="px-6 py-4 text-center">
-                        <div className="flex justify-center gap-3">
-                          <button
-                            onClick={() => {
-                              const dateStr = q.publish_at?.split('T')[0] || '2024-05-15';
-                              setSelectedDate(dateStr);
-                              setViewMode('calendar');
-                            }}
-                            className="text-gray-400 hover:text-black font-bold text-xs"
-                          >
-                            EDIT
-                          </button>
-                          <button
-                            onClick={() => deleteQuestion(q.id)}
-                            className="text-red-400 hover:text-red-600 font-bold text-xs"
-                          >
-                            DEL
-                          </button>
-                        </div>
+                      <td className="px-6 py-4 text-center" onClick={e => e.stopPropagation()}>
+                        <button
+                          onClick={() => deleteQuestion(q.id)}
+                          className="text-red-400 hover:text-red-600 font-bold text-xs"
+                        >
+                          DEL
+                        </button>
                       </td>
                     </tr>
                   ))}
@@ -553,6 +870,149 @@ const QuestionManager: React.FC = () => {
                   <p className="font-bold">필터에 맞는 질문이 없습니다</p>
                 </div>
               )}
+              </div>
+
+              {/* Edit Panel (right side, similar to calendar view) */}
+              <div className="bg-white p-6 rounded-2xl border border-gray-100 shadow-sm h-fit sticky top-6">
+                <div className="flex justify-between items-center mb-4">
+                  <h4 className="font-bold text-sm text-gray-400">질문 편집</h4>
+                  {editingListQuestion && (
+                    <button
+                      onClick={saveListEdit}
+                      className="text-xs font-bold px-3 py-1 rounded-lg bg-black text-white hover:bg-gray-800 transition-all"
+                    >
+                      저장
+                    </button>
+                  )}
+                </div>
+
+                {editingListQuestion ? (
+                  <div className="space-y-4">
+                    <div>
+                      <label className="text-[10px] font-bold text-gray-400 uppercase block mb-1">제목</label>
+                      <input
+                        type="text"
+                        value={editingListQuestion.title}
+                        onChange={e => updateListQuestion({ title: e.target.value })}
+                        className="w-full p-2 text-sm font-bold border border-gray-200 rounded-lg focus:ring-2 focus:ring-black outline-none"
+                        maxLength={20}
+                      />
+                    </div>
+
+                    <div>
+                      <label className="text-[10px] font-bold text-gray-400 uppercase block mb-1">설명</label>
+                      <textarea
+                        value={editingListQuestion.description}
+                        onChange={e => updateListQuestion({ description: e.target.value })}
+                        className="w-full p-2 text-xs border border-gray-200 rounded-lg focus:ring-2 focus:ring-black outline-none resize-none"
+                        rows={3}
+                      />
+                    </div>
+
+                    <div>
+                      <label className="text-[10px] font-bold text-gray-400 uppercase block mb-1">선택지 A</label>
+                      <input
+                        type="text"
+                        value={editingListQuestion.choice_1}
+                        onChange={e => updateListQuestion({ choice_1: e.target.value })}
+                        className="w-full p-2 text-xs font-semibold border border-gray-200 rounded-lg focus:ring-2 focus:ring-black outline-none"
+                      />
+                    </div>
+
+                    <div>
+                      <label className="text-[10px] font-bold text-gray-400 uppercase block mb-1">선택지 B</label>
+                      <input
+                        type="text"
+                        value={editingListQuestion.choice_2}
+                        onChange={e => updateListQuestion({ choice_2: e.target.value })}
+                        className="w-full p-2 text-xs font-semibold border border-gray-200 rounded-lg focus:ring-2 focus:ring-black outline-none"
+                      />
+                    </div>
+
+                    <div>
+                      <label className="text-[10px] font-bold text-gray-400 uppercase block mb-1">카테고리</label>
+                      <select
+                        value={editingListQuestion.category}
+                        onChange={e => updateListQuestion({ category: e.target.value as QuestionCategory })}
+                        className="w-full p-2 text-xs font-bold border border-gray-200 rounded-lg outline-none"
+                      >
+                        {Object.values(QuestionCategory).map(cat => (
+                          <option key={cat} value={cat}>{cat}</option>
+                        ))}
+                      </select>
+                    </div>
+
+                    <div>
+                      <label className="text-[10px] font-bold text-gray-400 uppercase block mb-1">상태</label>
+                      <select
+                        value={editingListQuestion.status}
+                        onChange={e => updateListQuestion({ status: e.target.value as QuestionStatus })}
+                        className="w-full p-2 text-xs font-bold border border-gray-200 rounded-lg outline-none"
+                      >
+                        {Object.values(QuestionStatus).map(status => (
+                          <option key={status} value={status}>{status}</option>
+                        ))}
+                      </select>
+                    </div>
+
+                    <div>
+                      <label className="text-[10px] font-bold text-gray-400 uppercase block mb-1">공개 날짜</label>
+                      <input
+                        type="date"
+                        value={editPublishDate}
+                        onChange={e => setEditPublishDate(e.target.value)}
+                        className="w-full p-2 text-xs border border-gray-200 rounded-lg focus:ring-2 focus:ring-black outline-none"
+                      />
+                    </div>
+
+                    <div className="grid grid-cols-2 gap-2">
+                      <div>
+                        <label className="text-[10px] font-bold text-gray-400 uppercase block mb-1">공개 시간</label>
+                        <select
+                          value={editPublishTime}
+                          onChange={e => setEditPublishTime(e.target.value)}
+                          className="w-full p-2 text-xs font-bold border border-gray-200 rounded-lg focus:ring-2 focus:ring-black outline-none"
+                        >
+                          {hourOptions.map(hour => (
+                            <option key={hour} value={hour}>{hour}</option>
+                          ))}
+                        </select>
+                      </div>
+                      <div>
+                        <label className="text-[10px] font-bold text-gray-400 uppercase block mb-1">마감 시간</label>
+                        <select
+                          value={editCloseTime}
+                          onChange={e => setEditCloseTime(e.target.value)}
+                          className="w-full p-2 text-xs font-bold border border-gray-200 rounded-lg focus:ring-2 focus:ring-black outline-none"
+                        >
+                          {hourOptions.map(hour => (
+                            <option key={hour} value={hour}>{hour}</option>
+                          ))}
+                        </select>
+                      </div>
+                    </div>
+
+                    <div className="pt-3 border-t border-gray-100">
+                      <div className="text-[10px] text-gray-400 space-y-1">
+                        <div>조회수: <span className="font-bold text-gray-600">{editingListQuestion.views || 0}</span></div>
+                        <div>도파민: <span className="font-bold text-blue-600">🔥 {editingListQuestion.dopamine_score || 0}</span></div>
+                      </div>
+                    </div>
+
+                    <button
+                      onClick={cancelListEdit}
+                      className="w-full py-2 text-xs font-bold text-gray-500 hover:text-black transition-colors"
+                    >
+                      취소
+                    </button>
+                  </div>
+                ) : (
+                  <div className="text-center py-8 text-gray-400">
+                    <p className="text-xs">질문을 선택하여 편집하세요</p>
+                    <p className="text-[10px] mt-2">테이블에서 행을 클릭하세요</p>
+                  </div>
+                )}
+              </div>
             </div>
 
             {/* Mobile Card View */}
@@ -593,11 +1053,7 @@ const QuestionManager: React.FC = () => {
 
                   <div className="flex gap-2">
                     <button
-                      onClick={() => {
-                        const dateStr = q.publish_at?.split('T')[0] || '2024-05-15';
-                        setSelectedDate(dateStr);
-                        setViewMode('calendar');
-                      }}
+                      onClick={() => openMobileEdit(q)}
                       className="flex-1 py-2 text-xs font-bold text-gray-500 bg-gray-50 rounded-lg hover:bg-gray-100 transition-colors"
                     >
                       편집
@@ -631,6 +1087,175 @@ const QuestionManager: React.FC = () => {
           </div>
         ) : null}
       </DragOverlay>
+
+      {/* Mobile Edit Modal */}
+      {mobileEditQuestion && (
+        <div className="fixed inset-0 z-[200] flex items-end sm:items-center justify-center bg-black/60 backdrop-blur-sm animate-in fade-in duration-200">
+          <div className="bg-white w-full sm:max-w-lg rounded-t-3xl sm:rounded-2xl shadow-2xl overflow-hidden max-h-[90vh] flex flex-col animate-in slide-in-from-bottom-4 sm:slide-in-from-bottom-0 duration-300">
+            {/* Header */}
+            <div className="p-4 sm:p-6 border-b border-gray-100 flex justify-between items-start">
+              <div>
+                <h3 className="text-base sm:text-lg font-bold">질문 편집</h3>
+                <p className="text-xs text-gray-400 mt-1">모든 정보를 수정할 수 있습니다</p>
+              </div>
+              <button onClick={cancelMobileEdit} className="p-2 hover:bg-gray-100 rounded-lg transition-colors">
+                <svg className="w-5 h-5 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                </svg>
+              </button>
+            </div>
+
+            {/* Content - Scrollable */}
+            <div className="flex-1 overflow-y-auto p-4 sm:p-6 space-y-4">
+              {/* 제목 */}
+              <div>
+                <label className="text-xs font-bold text-gray-400 uppercase block mb-2">제목 *</label>
+                <input
+                  type="text"
+                  value={mobileEditQuestion.title}
+                  onChange={e => updateMobileQuestion({ title: e.target.value })}
+                  className="w-full p-3 text-sm font-bold border border-gray-300 rounded-lg focus:ring-2 focus:ring-black outline-none"
+                  maxLength={20}
+                  placeholder="질문 제목을 입력하세요"
+                />
+              </div>
+
+              {/* 설명 */}
+              <div>
+                <label className="text-xs font-bold text-gray-400 uppercase block mb-2">설명</label>
+                <textarea
+                  value={mobileEditQuestion.description}
+                  onChange={e => updateMobileQuestion({ description: e.target.value })}
+                  className="w-full p-3 text-sm border border-gray-300 rounded-lg focus:ring-2 focus:ring-black outline-none resize-none"
+                  rows={3}
+                  placeholder="질문에 대한 설명을 입력하세요"
+                />
+              </div>
+
+              {/* 선택지 A */}
+              <div>
+                <label className="text-xs font-bold text-gray-400 uppercase block mb-2">선택지 A *</label>
+                <input
+                  type="text"
+                  value={mobileEditQuestion.choice_1}
+                  onChange={e => updateMobileQuestion({ choice_1: e.target.value })}
+                  className="w-full p-3 text-sm border border-gray-300 rounded-lg focus:ring-2 focus:ring-black outline-none"
+                  placeholder="첫 번째 선택지"
+                />
+              </div>
+
+              {/* 선택지 B */}
+              <div>
+                <label className="text-xs font-bold text-gray-400 uppercase block mb-2">선택지 B *</label>
+                <input
+                  type="text"
+                  value={mobileEditQuestion.choice_2}
+                  onChange={e => updateMobileQuestion({ choice_2: e.target.value })}
+                  className="w-full p-3 text-sm border border-gray-300 rounded-lg focus:ring-2 focus:ring-black outline-none"
+                  placeholder="두 번째 선택지"
+                />
+              </div>
+
+              {/* 카테고리 & 상태 */}
+              <div className="grid grid-cols-2 gap-3">
+                <div>
+                  <label className="text-xs font-bold text-gray-400 uppercase block mb-2">카테고리</label>
+                  <select
+                    value={mobileEditQuestion.category}
+                    onChange={e => updateMobileQuestion({ category: e.target.value as QuestionCategory })}
+                    className="w-full p-3 text-sm font-bold border border-gray-300 rounded-lg focus:ring-2 focus:ring-black outline-none"
+                  >
+                    {Object.values(QuestionCategory).map(cat => (
+                      <option key={cat} value={cat}>{cat}</option>
+                    ))}
+                  </select>
+                </div>
+                <div>
+                  <label className="text-xs font-bold text-gray-400 uppercase block mb-2">상태</label>
+                  <select
+                    value={mobileEditQuestion.status}
+                    onChange={e => updateMobileQuestion({ status: e.target.value as QuestionStatus })}
+                    className="w-full p-3 text-sm font-bold border border-gray-300 rounded-lg focus:ring-2 focus:ring-black outline-none"
+                  >
+                    {Object.values(QuestionStatus).map(status => (
+                      <option key={status} value={status}>{status}</option>
+                    ))}
+                  </select>
+                </div>
+              </div>
+
+              {/* 공개 날짜 */}
+              <div>
+                <label className="text-xs font-bold text-gray-400 uppercase block mb-2">공개 날짜</label>
+                <input
+                  type="date"
+                  value={editPublishDate}
+                  onChange={e => setEditPublishDate(e.target.value)}
+                  className="w-full p-3 text-sm border border-gray-300 rounded-lg focus:ring-2 focus:ring-black outline-none"
+                />
+              </div>
+
+              {/* 공개 시간 & 마감 시간 */}
+              <div className="grid grid-cols-2 gap-3">
+                <div>
+                  <label className="text-xs font-bold text-gray-400 uppercase block mb-2">공개 시간</label>
+                  <select
+                    value={editPublishTime}
+                    onChange={e => setEditPublishTime(e.target.value)}
+                    className="w-full p-3 text-sm font-bold border border-gray-300 rounded-lg focus:ring-2 focus:ring-black outline-none"
+                  >
+                    {hourOptions.map(hour => (
+                      <option key={hour} value={hour}>{hour}</option>
+                    ))}
+                  </select>
+                </div>
+                <div>
+                  <label className="text-xs font-bold text-gray-400 uppercase block mb-2">마감 시간</label>
+                  <select
+                    value={editCloseTime}
+                    onChange={e => setEditCloseTime(e.target.value)}
+                    className="w-full p-3 text-sm font-bold border border-gray-300 rounded-lg focus:ring-2 focus:ring-black outline-none"
+                  >
+                    {hourOptions.map(hour => (
+                      <option key={hour} value={hour}>{hour}</option>
+                    ))}
+                  </select>
+                </div>
+              </div>
+
+              {/* 태그 (선택) */}
+              {mobileEditQuestion.tags && (
+                <div>
+                  <label className="text-xs font-bold text-gray-400 uppercase block mb-2">태그</label>
+                  <div className="flex flex-wrap gap-2">
+                    {mobileEditQuestion.tags.map((tag, idx) => (
+                      <span key={idx} className="px-2 py-1 bg-gray-100 text-gray-600 rounded text-xs">
+                        #{tag}
+                      </span>
+                    ))}
+                  </div>
+                </div>
+              )}
+            </div>
+
+            {/* Footer - Actions */}
+            <div className="p-4 sm:p-6 bg-gray-50 border-t border-gray-100 flex gap-3">
+              <button
+                onClick={cancelMobileEdit}
+                className="flex-1 px-6 py-3 text-sm font-bold text-gray-500 hover:text-black transition-colors"
+              >
+                취소
+              </button>
+              <button
+                onClick={saveMobileEdit}
+                className="flex-1 px-6 py-3 bg-black text-white rounded-xl text-sm font-bold hover:bg-gray-800 transition-all shadow-lg"
+              >
+                저장하기
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </DndContext>
   );
 };
@@ -654,7 +1279,7 @@ const CalendarDay: React.FC<{
     <div
       ref={setNodeRef}
       onClick={onSelect}
-      className={`min-h-[70px] p-2 transition-all cursor-pointer relative ${
+      className={`min-h-[110px] p-2 transition-all cursor-pointer relative ${
         isCurrent ? 'bg-white hover:bg-blue-50' : 'bg-gray-50/50 cursor-default'
       } ${isSelected ? 'ring-2 ring-inset ring-black bg-blue-50' : ''} ${
         isOver ? 'bg-blue-100 ring-2 ring-blue-400' : ''
@@ -663,20 +1288,20 @@ const CalendarDay: React.FC<{
       {isCurrent && (
         <>
           <div className="flex items-center justify-between">
-            <span className={`text-[10px] font-bold ${
+            <span className={`text-sm font-bold ${
               isToday ? 'text-blue-600' : isSelected ? 'text-black' : 'text-gray-400'
             }`}>
               {dayNumber}
             </span>
             {isToday && (
-              <span className="text-[8px] font-bold text-blue-600 bg-blue-100 px-1 rounded">
+              <span className="text-[9px] font-bold text-blue-600 bg-blue-100 px-1.5 py-0.5 rounded">
                 오늘
               </span>
             )}
           </div>
           {question && (
-            <div className="mt-1">
-              <div className="text-[9px] bg-blue-500 text-white p-1 rounded truncate font-bold">
+            <div className="mt-2">
+              <div className="text-[10px] bg-blue-500 text-white p-1.5 rounded truncate font-bold leading-tight">
                 {question.title}
               </div>
             </div>
@@ -688,7 +1313,7 @@ const CalendarDay: React.FC<{
 };
 
 // Draggable Question Card Component
-const DraggableQuestionCard: React.FC<{ question: Question }> = ({ question }) => {
+const DraggableQuestionCard: React.FC<{ question: Question; onDatePick: (question: Question) => void }> = ({ question, onDatePick }) => {
   const { attributes, listeners, setNodeRef, transform, isDragging } = useDraggable({
     id: question.id
   });
@@ -698,27 +1323,48 @@ const DraggableQuestionCard: React.FC<{ question: Question }> = ({ question }) =
   } : undefined;
 
   return (
-    <div
-      ref={setNodeRef}
-      style={style}
-      {...listeners}
-      {...attributes}
-      className={`bg-white p-4 rounded-xl border-2 border-gray-200 hover:border-black transition-all cursor-move ${
-        isDragging ? 'opacity-50' : ''
-      }`}
-    >
-      <div className="flex items-start justify-between mb-2">
-        <span className="text-[9px] font-bold px-2 py-0.5 rounded bg-blue-50 text-blue-600">
-          {question.category}
-        </span>
-        <svg className="w-4 h-4 text-gray-300" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 8h16M4 16h16" />
-        </svg>
+    <div className={`bg-white p-4 rounded-xl border-2 border-gray-200 transition-all ${isDragging ? 'opacity-50' : ''}`}>
+      {/* Desktop: Draggable */}
+      <div
+        ref={setNodeRef}
+        style={style}
+        {...listeners}
+        {...attributes}
+        className="hidden md:block cursor-move hover:border-black"
+      >
+        <div className="flex items-start justify-between mb-2">
+          <span className="text-[9px] font-bold px-2 py-0.5 rounded bg-blue-50 text-blue-600">
+            {question.category}
+          </span>
+          <svg className="w-4 h-4 text-gray-300" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 8h16M4 16h16" />
+          </svg>
+        </div>
+        <h4 className="font-bold text-sm mb-1 truncate">{question.title}</h4>
+        <p className="text-xs text-gray-500 line-clamp-2 mb-2">{question.description}</p>
+        <div className="flex items-center justify-between text-[10px]">
+          <span className="text-gray-400">도파민: 🔥 {question.dopamine_score}</span>
+        </div>
       </div>
-      <h4 className="font-bold text-sm mb-1 truncate">{question.title}</h4>
-      <p className="text-xs text-gray-500 line-clamp-2 mb-2">{question.description}</p>
-      <div className="flex items-center justify-between text-[10px]">
-        <span className="text-gray-400">도파민: 🔥 {question.dopamine_score}</span>
+
+      {/* Mobile: Button to select date */}
+      <div className="md:hidden">
+        <div className="flex items-start justify-between mb-2">
+          <span className="text-[9px] font-bold px-2 py-0.5 rounded bg-blue-50 text-blue-600">
+            {question.category}
+          </span>
+        </div>
+        <h4 className="font-bold text-sm mb-1 truncate">{question.title}</h4>
+        <p className="text-xs text-gray-500 line-clamp-2 mb-3">{question.description}</p>
+        <div className="flex items-center justify-between gap-2">
+          <span className="text-[10px] text-gray-400">🔥 {question.dopamine_score}</span>
+          <button
+            onClick={() => onDatePick(question)}
+            className="px-3 py-1.5 bg-black text-white rounded-lg text-[10px] font-bold hover:bg-gray-800 transition-colors"
+          >
+            날짜 배정
+          </button>
+        </div>
       </div>
     </div>
   );
